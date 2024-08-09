@@ -6,7 +6,7 @@ BIN := $(VENV_DIR)/bin
 PYTHON_INTERPRETER := $(BIN)/$(PYTHON)
 SHELL := /bin/bash
 CURRENT_DATE := $(shell date +"%Y-%m-%d-%T")
-TOKEN := $(NHHC_DT)
+TOKEN := ${NHHC_DT}
 
 .PHONY: help
 help: ## Show this help
@@ -16,23 +16,24 @@ help: ## Show this help
 venv: ## Make a new virtual environment
 	python3 -m venv $(VENV) && source $(BIN)/activate
 
-.PHONY: install
-install:  ## Make venv and install requirements
-	doppler run  -t $(TOKEN) -- pip install --upgrade -r ./requirements.txt
+.PHONY: collect
+collect:
+	doppler -t $(TOKEN) run -- python  /src/app/manage.py collectstatic --no-input
 
+.PHONY: install
+install: ## Make venv and install requirements
+	pip install -r ./requirements.txt
+	
+	
 freeze: ## Pin current dependencies
 	$(BIN)/pip freeze > ../requirements.txt
 
-.PHONY: collect
-collect:
-	doppler run  -t $(TOKEN) -- $(PYTHON_INTERPRETER)  manage.py collectstatic --no-input
-
 migrate: ## Make and run migrations
-	doppler run -t $(TOKEN) -- 	$(PYTHON_INTERPRETER) manage.py makemigrations
-	doppler run -t $(TOKEN) -- 	$(PYTHON_INTERPRETER) manage.py migrate
+	doppler -t $(TOKEN)  run  --  	$(PYTHON_INTERPRETER) manage.py makemigrations
+	doppler -t $(TOKEN)  run  --  	$(PYTHON_INTERPRETER) manage.py migrate
 
 lint:
-	doppler run -t $(TOKEN) -- prospector  -w  pylint pyroma mypy dodgy mccabe bandit profile-validator > prospector_results_${CURRENTDATE}.json
+	doppler -t $(TOKEN)  run  --  prospector  -w  pylint pyroma mypy dodgy mccabe bandit profile-validator > prospector_results_${CURRENTDATE}.json
 
 db-shell: ## Access the Postgres Docker database interactively with psql. Pass in DBNAME=<name>.
 	docker exec -it container_name psql -d $(DBNAME)
@@ -53,7 +54,7 @@ pipeline-test: ## Run tests
 
 .PHONY: flower
 flower:
-	nohup doppler run -t $(TOKEN) -- celery -A nhhc flower --port=9005
+	nohup doppler -t $(TOKEN)  run  --  celery -A nhhc flower --port=9005
 
 .PHONY: 	docs
 docs:
@@ -61,16 +62,16 @@ docs:
 
 .PHONY: run
 run:
-	doppler run -t $(TOKEN) -- 	$(PYTHON_INTERPRETER) manage.py runserver 9555
+	doppler -t $(TOKEN)  run  --  	$(PYTHON_INTERPRETER) manage.py runserver 9555
 
 .PHONY: debug
 debug: ## Run the Django server
-	doppler run -t $(TOKEN) -- 	kolo run manage.py runserver --noreload --nothreading
+	doppler -t $(TOKEN)  run  --  	kolo run manage.py runserver --noreload --nothreading
 
 .PHONY: admin
 admin:
-	doppler run -t $(TOKEN) --  $(PYTHON_INTERPRETER) manage.py createsuperuser --no-input
+	doppler -t $(TOKEN)  run  --   $(PYTHON_INTERPRETER) manage.py createsuperuser --no-input
 
 .PHONY: start
 start:
-	doppler run -t $(TOKEN)  --  gunicorn --workers=2  --threads=2 nhhc.wsgi:application -b :7772
+	doppler -t $(TOKEN)  run  --  gunicorn --workers=2  --threads=2 nhhc.wsgi:application -b :7772
